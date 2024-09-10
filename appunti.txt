@@ -1,0 +1,2 @@
+COORDINATE DB
+Per memorizzare le coordinate geografiche (latitudine e longitudine) su PostgreSQL, il tipo di dato ideale è il POINT. Tuttavia, se hai bisogno di funzionalità GIS più avanzate (come calcoli di distanza, ricerca spaziale, ecc.), è consigliato usare le estensioni PostGIS e il tipo di dato GEOGRAPHY.
