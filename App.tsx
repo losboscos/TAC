@@ -116,7 +116,7 @@ function App(): React.JSX.Element {
   }, []);
 
   // Aggiungi Supabase URL e Anon Key come costanti nel template HTML
-  const thunderforestMapHtml = `
+  const thunderforestMapHtml = (supabaseUrl: string, supabaseAnonKey: string): string => `
   <!DOCTYPE html>
   <html>
   <head>
@@ -132,12 +132,22 @@ function App(): React.JSX.Element {
     <script>
       // Inizializza la mappa centrata sulla posizione dell'utente
       var map = L.map('map').setView([${position.lat}, ${position.lng}], 13);
-  
+      
       // Aggiungi il livello della mappa Thunderforest
       L.tileLayer('https://{s}.tile.thunderforest.com/cycle/{z}/{x}/{y}.png?apikey=${apiKey}', {
         maxZoom: 19,
       }).addTo(map);
-  
+
+      
+
+      // Inizializza Supabase con i parametri passati
+      const supabaseUrl = "${supabaseUrl}";
+      const supabaseAnonKey = "${supabaseAnonKey}";
+
+      // Testa il client Supabase
+      console.log('Supabase URL:', supabaseUrl);
+      console.log('Supabase Anon Key:', supabaseAnonKey);
+    
       // Funzione per calcolare la distanza tra due coordinate geografiche
       function getDistance(lat1, lon1, lat2, lon2) {
         const R = 6371e3; // Raggio della Terra in metri
@@ -153,23 +163,31 @@ function App(): React.JSX.Element {
       // Funzione per recuperare i posti dal database e controllare se sono nel cerchio
       async function getPostiInCerchio(lat, lng, radius) {
         console.log("Checkpoint: Chiamata a Supabase iniziata");
-        const { data: posti, error } = await window.supabase
-          .from('posto')
-          .select('id, lat, lon');
-        console.log("Checkpoint");
-        if (error) {
-          console.error('Errore nel recuperare i posti:', error);
+
+        try {
+          console.log("Supabase client:", supabase);
+          console.log('WORKED');
+          const { data: posti, error } = await supabase
+            .from('posto')
+            .select('*');
+
+          if (error) {
+            console.error('Errore nel recuperare i posti:', error);
+            return [];
+          }
+
+          console.log('Posti recuperati dal database:', posti);
+
+          const postiInCerchio = posti.filter((posto) => {
+            const distanza = getDistance(lat, lng, posto.lat, posto.lon);
+            return distanza <= radius;
+          });
+          console.log('WORKED');
+          return postiInCerchio;
+        } catch (err) {
+          console.error("Errore nella chiamata a Supabase:", err);
           return [];
         }
-
-        console.log('Posti recuperati dal database:', posti);
-  
-        const postiInCerchio = posti.filter((posto) => {
-          const distanza = getDistance(lat, lng, posto.lat, posto.lon);
-          return distanza <= radius;
-        });
-  
-        return postiInCerchio;
       }
   
       // Aggiungi un marker alla posizione corrente
@@ -200,7 +218,7 @@ function App(): React.JSX.Element {
           });
           marker.bindPopup(popupContent).openPopup();
         } else {
-          marker.bindPopup('Nessun posto trovato in questa area').openPopup();
+          marker.bindPopup(\`Nessun posto trovato in questa area<br>Lat: \${latLng.lat}<br>Lng: \${latLng.lng}\`).openPopup();
         }
       });
     </script>
@@ -208,10 +226,6 @@ function App(): React.JSX.Element {
   </html>
   `;
   
-
-
-
-
   const isDarkMode = useColorScheme() === 'dark';
   const backgroundStyle = {
     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
@@ -226,7 +240,7 @@ function App(): React.JSX.Element {
       <View style={styles.container}>
       <WebView
         originWhitelist={['https://*']}
-        source={{ html: thunderforestMapHtml }}
+        source={{ html: thunderforestMapHtml(SUPABASE_URL, SUPABASE_ANON_KEY) }}
         style={styles.map}
         javaScriptEnabled={true}
         domStorageEnabled={true}
